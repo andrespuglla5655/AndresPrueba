@@ -13,6 +13,11 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copiar código
 COPY app.py /app
 
+# Crear usuario no root
+RUN adduser --disabled-password --gecos '' appuser
+RUN chown -R appuser:appuser /app
+USER appuser
+
 # Exponer el puerto donde corre Flask
 EXPOSE 5000
 
