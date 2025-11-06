@@ -66,12 +66,17 @@ jobs:
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
 
+    - name: 🏷️ Convert repository name to lowercase
+      id: repo
+      run: |
+        echo "repository=${GITHUB_REPOSITORY,,}" >> $GITHUB_OUTPUT
+
     - name: 🏗️ Build and push Docker image
       uses: docker/build-push-action@v6
       with:
         context: .
         push: true
         tags: |
-          ghcr.io/${{ github.repository }}:latest
-          ghcr.io/${{ github.repository }}:${{ github.sha }}
+          ghcr.io/${{ steps.repo.outputs.repository }}:latest
+          ghcr.io/${{ steps.repo.outputs.repository }}:${{ github.sha }}
         platforms: linux/amd64,linux/arm64
