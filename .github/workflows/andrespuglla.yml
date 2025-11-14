@@ -84,6 +84,13 @@ jobs:
         echo "Usuario: ${{ secrets.VPS_USER }}"
         echo "Puerto: ${{ secrets.VPS_SSH_PORT }}"
     
+    - name: 🔍 Test de conectividad al puerto SSH
+      if: ${{ secrets.VPS_HOST != '' }}
+      continue-on-error: true
+      run: |
+        echo "Verificando acceso al puerto SSH..."
+        timeout 10 bash -c "</dev/tcp/${{ secrets.VPS_HOST }}/${{ secrets.VPS_SSH_PORT }}" && echo "✅ Puerto SSH accesible" || echo "⚠️ Puerto SSH no accesible - continuando de todas formas"
+    
     - name: 🧪 Probar conexión SSH
       if: ${{ secrets.VPS_HOST != '' }}
       uses: appleboy/ssh-action@v1.0.3
@@ -93,7 +100,7 @@ jobs:
         username: ${{ secrets.VPS_USER }}
         password: ${{ secrets.VPS_PASSWORD }}
         port: ${{ secrets.VPS_SSH_PORT }}
-        timeout: 60s
+        timeout: 30s
         command_timeout: 10m
         script: |
           echo "✅ Conexión exitosa desde GitHub Actions"
@@ -122,7 +129,7 @@ jobs:
         username: ${{ secrets.VPS_USER }}
         password: ${{ secrets.VPS_PASSWORD }}
         port: ${{ secrets.VPS_SSH_PORT }}
-        timeout: 60s
+        timeout: 30s
         command_timeout: 10m
         script: |
           cd /home/${{ secrets.VPS_USER }}/andres
