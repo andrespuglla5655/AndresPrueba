@@ -79,19 +79,25 @@ jobs:
     - name: 🧾 Mostrar variables básicas (solo locales, no secretos)
       if: ${{ secrets.VPS_HOST != '' }}
       run: |
-        echo "Probando conexión SSH con:"
+        echo "📋 Configuración SSH:"
         echo "Host: ${{ secrets.VPS_HOST }}"
         echo "Usuario: ${{ secrets.VPS_USER }}"
         echo "Puerto: ${{ secrets.VPS_SSH_PORT }}"
+        echo ""
+        echo "⚠️ NOTA: Si la conexión SSH falla, el pipeline continuará."
+        echo "Esto puede deberse a:"
+        echo "  - Firewall bloqueando GitHub Actions"
+        echo "  - VPS no accesible públicamente"
+        echo "  - Credenciales incorrectas"
     
     - name: 🔍 Test de conectividad al puerto SSH
       if: ${{ secrets.VPS_HOST != '' }}
       continue-on-error: true
       run: |
-        echo "Verificando acceso al puerto SSH..."
-        timeout 10 bash -c "</dev/tcp/${{ secrets.VPS_HOST }}/${{ secrets.VPS_SSH_PORT }}" && echo "✅ Puerto SSH accesible" || echo "⚠️ Puerto SSH no accesible - continuando de todas formas"
+        echo "Verificando si el puerto SSH es accesible..."
+        nc -zv -w5 ${{ secrets.VPS_HOST }} ${{ secrets.VPS_SSH_PORT }} 2>&1 || echo "⚠️ No se puede alcanzar el puerto SSH"
     
-    - name: 🧪 Probar conexión SSH
+    - name: 🧪 Probar conexión SSH (Opcional)
       if: ${{ secrets.VPS_HOST != '' }}
       uses: appleboy/ssh-action@v1.0.3
       continue-on-error: true
@@ -101,14 +107,15 @@ jobs:
         password: ${{ secrets.VPS_PASSWORD }}
         port: ${{ secrets.VPS_SSH_PORT }}
         timeout: 30s
-        command_timeout: 10m
+        command_timeout: 2m
         script: |
-          echo "✅ Conexión exitosa desde GitHub Actions"
+          echo "✅ Conexión SSH exitosa desde GitHub Actions"
           hostname
           whoami
           uptime
+          docker --version || echo "Docker no disponible"
     
-    - name: 📦 Copiar stack.yml al VPS
+    - name: 📦 Copiar stack.yml al VPS (Opcional)
       if: ${{ secrets.VPS_HOST != '' }}
       uses: appleboy/scp-action@v0.1.7
       continue-on-error: true
@@ -120,7 +127,7 @@ jobs:
         source: "stack.yml"
         target: "/home/${{ secrets.VPS_USER }}/andres"
     
-    - name: 🚀 Deploy en VPS con Docker Stack
+    - name: 🚀 Deploy automático en VPS (Opcional)
       if: ${{ secrets.VPS_HOST != '' }}
       uses: appleboy/ssh-action@v1.0.3
       continue-on-error: true
@@ -130,15 +137,27 @@ jobs:
         password: ${{ secrets.VPS_PASSWORD }}
         port: ${{ secrets.VPS_SSH_PORT }}
         timeout: 30s
-        command_timeout: 10m
+        command_timeout: 5m
         script: |
-          cd /home/${{ secrets.VPS_USER }}/andres
-          echo "📋 Archivo stack.yml recibido:"
-          cat stack.yml
+          cd /home/${{ secrets.VPS_USER }}/andres || exit 0
+          echo "📋 Contenido de stack.yml:"
+          cat stack.yml || exit 0
           echo ""
-          echo "🔄 Actualizando stack..."
-          docker stack deploy --with-registry-auth -c stack.yml andres || echo "⚠️ Error en deploy"
+          echo "🔄 Haciendo deploy..."
+          docker stack deploy --with-registry-auth -c stack.yml andres || echo "⚠️ Deploy falló"
           echo ""
-          echo "📊 Servicios activos:"
-          docker service ls
+          echo "📊 Servicios:"
+          docker service ls || echo "No se pudo listar servicios"
+    
+    - name: ✅ Pipeline completado
+      run: |
+        echo "🎉 Pipeline CI/CD completado exitosamente!"
+        echo ""
+        echo "📦 Imagen publicada en:"
+        echo "   ghcr.io/andrespuglla5655/andresprueba:latest"
+        echo "   ghcr.io/andrespuglla5655/andresprueba:${{ github.sha }}"
+        echo ""
+        echo "🚀 Para hacer deploy manual en tu VPS:"
+        echo "   1. Conecta a tu VPS por SSH"
+        echo "   2. Ejecuta: docker stack deploy --with-registry-auth -c stack.yml andres"
 
