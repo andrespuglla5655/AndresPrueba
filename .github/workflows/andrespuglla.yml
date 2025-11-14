@@ -83,22 +83,23 @@ jobs:
         echo "Usuario: ${{ secrets.VPS_USER }}"
         echo "Puerto: ${{ secrets.VPS_SSH_PORT }}"
     
+    - name: 🧾 Mostrar variables básicas (solo locales, no secretos)
+      run: |
+        echo "Probando conexión SSH con:"
+        echo "Host: ${{ secrets.VPS_HOST }}"
+        echo "Usuario: ${{ secrets.VPS_USER }}"
+        echo "Puerto: ${{ secrets.VPS_SSH_PORT }}"
+    
     - name: 🧪 Probar conexión SSH
-      if: ${{ secrets.VPS_HOST != '' }}
-      uses: appleboy/ssh-action@v1.0.3
-      continue-on-error: true
+      uses: appleboy/ssh-action@v1
       with:
         host: ${{ secrets.VPS_HOST }}
         username: ${{ secrets.VPS_USER }}
         password: ${{ secrets.VPS_PASSWORD }}
         port: ${{ secrets.VPS_SSH_PORT }}
-        timeout: 30s
-        command_timeout: 10m
         script: |
           echo "✅ Conexión exitosa desde GitHub Actions"
           hostname
           whoami
           uptime
-          echo "Docker version:"
-          docker --version || echo "Docker no instalado"
 
