@@ -77,68 +77,30 @@ jobs:
         platforms: linux/amd64,linux/arm64
 
     - name: 🧾 Mostrar variables básicas (solo locales, no secretos)
-      if: ${{ secrets.VPS_HOST != '' }}
       run: |
         echo "Probando conexión SSH con:"
         echo "Host: ${{ secrets.VPS_HOST }}"
         echo "Usuario: ${{ secrets.VPS_USER }}"
         echo "Puerto: ${{ secrets.VPS_SSH_PORT }}"
     
-    - name: 🔍 Test de conectividad al puerto SSH
-      if: ${{ secrets.VPS_HOST != '' }}
-      continue-on-error: true
-      run: |
-        echo "Verificando acceso al puerto SSH..."
-        timeout 10 bash -c "</dev/tcp/${{ secrets.VPS_HOST }}/${{ secrets.VPS_SSH_PORT }}" && echo "✅ Puerto SSH accesible" || echo "⚠️ Puerto SSH no accesible - continuando de todas formas"
-    
     - name: 🧪 Probar conexión SSH
-      if: ${{ secrets.VPS_HOST != '' }}
-      uses: appleboy/ssh-action@v1.0.3
-      continue-on-error: true
+      uses: appleboy/ssh-action@v1
       with:
         host: ${{ secrets.VPS_HOST }}
         username: ${{ secrets.VPS_USER }}
         password: ${{ secrets.VPS_PASSWORD }}
         port: ${{ secrets.VPS_SSH_PORT }}
-        timeout: 30s
-        command_timeout: 10m
         script: |
           echo "✅ Conexión exitosa desde GitHub Actions"
           hostname
           whoami
           uptime
-    
-    - name: 📦 Copiar stack.yml al VPS
-      if: ${{ secrets.VPS_HOST != '' }}
-      uses: appleboy/scp-action@v0.1.7
-      continue-on-error: true
+    - name: Copiar stack.yml to VPS (SCP)
+      uses: appleboy/scp-action@v1
       with:
         host: ${{ secrets.VPS_HOST }}
         username: ${{ secrets.VPS_USER }}
         password: ${{ secrets.VPS_PASSWORD }}
         port: ${{ secrets.VPS_SSH_PORT }}
         source: "stack.yml"
-        target: "/home/${{ secrets.VPS_USER }}/andres"
-    
-    - name: 🚀 Deploy en VPS con Docker Stack
-      if: ${{ secrets.VPS_HOST != '' }}
-      uses: appleboy/ssh-action@v1.0.3
-      continue-on-error: true
-      with:
-        host: ${{ secrets.VPS_HOST }}
-        username: ${{ secrets.VPS_USER }}
-        password: ${{ secrets.VPS_PASSWORD }}
-        port: ${{ secrets.VPS_SSH_PORT }}
-        timeout: 30s
-        command_timeout: 10m
-        script: |
-          cd /home/${{ secrets.VPS_USER }}/andres
-          echo "📋 Archivo stack.yml recibido:"
-          cat stack.yml
-          echo ""
-          echo "🔄 Actualizando stack..."
-          docker stack deploy --with-registry-auth -c stack.yml andres || echo "⚠️ Error en deploy"
-          echo ""
-          echo "📊 Servicios activos:"
-          docker service ls
-
+        target: "/home/${{ secrets.VPS_USER }}/deploy1"
