@@ -76,36 +76,23 @@ jobs:
           ghcr.io/andrespuglla5655/andresprueba:${{ github.sha }}
         platforms: linux/amd64,linux/arm64
 
-    - name: 🔍 Verificar conectividad al VPS
-      if: ${{ secrets.VPS_HOST != '' }}
-      continue-on-error: true
+    - name: 🧾 Mostrar variables básicas (solo locales, no secretos)
       run: |
-        echo "Probando conexión al VPS:"
+        echo "Probando conexión SSH con:"
         echo "Host: ${{ secrets.VPS_HOST }}"
         echo "Usuario: ${{ secrets.VPS_USER }}"
         echo "Puerto: ${{ secrets.VPS_SSH_PORT }}"
-        echo ""
-        echo "Test de conectividad:"
-        timeout 10 bash -c "</dev/tcp/${{ secrets.VPS_HOST }}/${{ secrets.VPS_SSH_PORT }}" && echo "✅ Puerto SSH accesible" || echo "⚠️ Puerto SSH no accesible - Verifica firewall/IP"
     
     - name: 🧪 Probar conexión SSH
-      if: ${{ secrets.VPS_HOST != '' }}
-      uses: appleboy/ssh-action@v1.0.3
-      continue-on-error: true
+      uses: appleboy/ssh-action@v1
       with:
         host: ${{ secrets.VPS_HOST }}
         username: ${{ secrets.VPS_USER }}
         password: ${{ secrets.VPS_PASSWORD }}
         port: ${{ secrets.VPS_SSH_PORT }}
-        timeout: 60s
-        command_timeout: 10m
         script: |
           echo "✅ Conexión exitosa desde GitHub Actions"
-          echo "Información del servidor:"
           hostname
           whoami
           uptime
-          echo ""
-          echo "Docker version:"
-          docker --version || echo "Docker no instalado"
 
