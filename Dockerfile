@@ -1,25 +1,13 @@
-# Imagen base oficial de Python
-FROM python:3.11-slim
+FROM python:3.12-slim
 
-# Establecer directorio de trabajo
 WORKDIR /app
 
-# Copiar archivos de dependencias
 COPY requirements.txt .
 
-# Instalar dependencias
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copiar código
-COPY app.py /app
+COPY . .
 
-# Crear usuario no root
-RUN adduser --disabled-password --gecos '' appuser
-RUN chown -R appuser:appuser /app
-USER appuser
+EXPOSE 80
 
-# Exponer el puerto donde corre Flask
-EXPOSE 5000
-
-# Comando por defecto
 CMD ["python", "app.py"]
