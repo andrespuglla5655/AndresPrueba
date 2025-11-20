@@ -84,7 +84,7 @@ jobs:
         echo "Puerto: ${{ secrets.VPS_SSH_PORT }}"
     
     - name: 🧾 Verificar configuración SSH
-      if: ${{ secrets.VPS_HOST != '' }}
+      if: env.VPS_HOST != ''
       run: |
         echo "📋 Configuración SSH para despliegue:"
         echo "Host: ${{ secrets.VPS_HOST }}"
@@ -94,7 +94,7 @@ jobs:
         echo "⚠️ NOTA: Si la conexión SSH falla, el pipeline continuará."
 
     - name: 📦 Copiar stack.yml al VPS (SCP)
-      if: ${{ secrets.VPS_HOST != '' }}
+      if: env.VPS_HOST != ''
       uses: appleboy/scp-action@v0.1.7
       continue-on-error: true
       with:
@@ -106,7 +106,7 @@ jobs:
         target: "/home/${{ secrets.VPS_USER }}/andres"
 
     - name: 🚀 Desplegar servicio en VPS
-      if: ${{ secrets.VPS_HOST != '' }}
+      if: env.VPS_HOST != ''
       uses: appleboy/ssh-action@v1.0.3
       continue-on-error: true
       with:
