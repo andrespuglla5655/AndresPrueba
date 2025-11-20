@@ -12,6 +12,6 @@ COPY . .
 RUN useradd -m -u 1000 appuser && chown -R appuser:appuser /app
 USER appuser
 
-EXPOSE 80
+EXPOSE 101
 
-CMD ["gunicorn", "-w", "4", "-b", "0.0.0.0:80", "app:app"]
+CMD ["gunicorn", "-w", "4", "-b", "0.0.0.0:101", "app:app"]

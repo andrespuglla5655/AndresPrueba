@@ -21,7 +21,7 @@ services:
     networks:
       - traefik-public
     ports:
-      - "80:80"
+      - "101:101"
 
 networks:
   traefik-public:
