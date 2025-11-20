@@ -104,3 +104,17 @@ jobs:
         port: ${{ secrets.VPS_SSH_PORT }}
         source: "stack.yml"
         target: "/home/${{ secrets.VPS_USER }}/deploy1"
+
+    - name: Desplegar stack en VPS
+      uses: appleboy/ssh-action@v1
+      with:
+        host: ${{ secrets.VPS_HOST }}
+        username: ${{ secrets.VPS_USER }}
+        password: ${{ secrets.VPS_PASSWORD }}
+        port: ${{ secrets.VPS_SSH_PORT }}
+        script: |
+          cd /home/${{ secrets.VPS_USER }}/deploy1
+          # Crear red traefik-public si no existe
+          docker network create traefik-public || true
+          # Desplegar el stack
+          docker stack deploy -c stack.yml andres
