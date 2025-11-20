@@ -76,13 +76,6 @@ jobs:
           ghcr.io/andrespuglla5655/andresprueba:${{ github.sha }}
         platforms: linux/amd64,linux/arm64
 
-    - name: 🧾 Mostrar variables básicas (solo locales, no secretos)
-      run: |
-        echo "Probando conexión SSH con:"
-        echo "Host: ${{ secrets.VPS_HOST }}"
-        echo "Usuario: ${{ secrets.VPS_USER }}"
-        echo "Puerto: ${{ secrets.VPS_SSH_PORT }}"
-    
     - name: 🧾 Verificar configuración SSH
       if: env.VPS_HOST != ''
       run: |
