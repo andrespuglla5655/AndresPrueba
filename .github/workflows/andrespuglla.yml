@@ -50,10 +50,10 @@ jobs:
 
     - name: 🧪 Test Docker image locally
       run: |
-        docker build -t andres .
-        docker run -d -p 8080:80 --name test-andres andres
+        docker build -t ghcr.io/andrespuglla5655/andresprueba:latest .
+        docker run -d -p 101:101 --name test-andres ghcr.io/andrespuglla5655/andresprueba:latest
         sleep 5
-        curl -f http://localhost:8080
+        curl -f http://localhost:101
         docker rm -f test-andres
 
     - name: 🔧 Set up Docker Buildx
