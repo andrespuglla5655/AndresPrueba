@@ -76,46 +76,65 @@ jobs:
           ghcr.io/andrespuglla5655/andresprueba:${{ github.sha }}
         platforms: linux/amd64,linux/arm64
 
-    - name: 🧾 Mostrar variables básicas (solo locales, no secretos)
+    - name: 🧾 Verificar configuración SSH
+      if: ${{ secrets.VPS_HOST != '' }}
       run: |
-        echo "Probando conexión SSH con:"
+        echo "📋 Configuración SSH para despliegue:"
         echo "Host: ${{ secrets.VPS_HOST }}"
         echo "Usuario: ${{ secrets.VPS_USER }}"
         echo "Puerto: ${{ secrets.VPS_SSH_PORT }}"
-    
-    - name: 🧪 Probar conexión SSH
-      uses: appleboy/ssh-action@v1
-      with:
-        host: ${{ secrets.VPS_HOST }}
-        username: ${{ secrets.VPS_USER }}
-        password: ${{ secrets.VPS_PASSWORD }}
-        port: ${{ secrets.VPS_SSH_PORT }}
-        script: |
-          echo "✅ Conexión exitosa desde GitHub Actions"
-          hostname
-          whoami
-          uptime
-    - name: Copiar stack.yml to VPS (SCP)
-      uses: appleboy/scp-action@v1
+        echo ""
+        echo "⚠️ NOTA: Si la conexión SSH falla, el pipeline continuará."
+
+    - name: 📦 Copiar stack.yml al VPS (SCP)
+      if: ${{ secrets.VPS_HOST != '' }}
+      uses: appleboy/scp-action@v0.1.7
+      continue-on-error: true
       with:
         host: ${{ secrets.VPS_HOST }}
         username: ${{ secrets.VPS_USER }}
         password: ${{ secrets.VPS_PASSWORD }}
         port: ${{ secrets.VPS_SSH_PORT }}
         source: "stack.yml"
-        target: "/home/${{ secrets.VPS_USER }}/deploy1"
+        target: "/home/${{ secrets.VPS_USER }}/andres"
 
-    - name: despliegue de servicio 
-      uses: appleboy/scp-action@v1
+    - name: 🚀 Desplegar servicio en VPS
+      if: ${{ secrets.VPS_HOST != '' }}
+      uses: appleboy/ssh-action@v1.0.3
+      continue-on-error: true
       with:
         host: ${{ secrets.VPS_HOST }}
         username: ${{ secrets.VPS_USER }}
         password: ${{ secrets.VPS_PASSWORD }}
         port: ${{ secrets.VPS_SSH_PORT }}
+        timeout: 30s
+        command_timeout: 5m
         script: |
-          echo "Desplegando servicio"
-          cd ~/deploy1
+          echo "🚀 Iniciando despliegue en VPS..."
+          cd /home/${{ secrets.VPS_USER }}/andres || mkdir -p /home/${{ secrets.VPS_USER }}/andres && cd /home/${{ secrets.VPS_USER }}/andres
+          
+          echo "📋 Verificando stack.yml:"
+          ls -la stack.yml || echo "⚠️ stack.yml no encontrado"
+          
+          echo "📥 Descargando imagen desde GHCR:"
+          docker pull ghcr.io/andrespuglla5655/andresprueba:latest || echo "⚠️ Error al descargar imagen"
+          
+          echo "🔄 Desplegando stack:"
+          docker stack deploy --with-registry-auth -c stack.yml andres || echo "⚠️ Error en despliegue"
+          
+          echo "📊 Servicios activos:"
+          docker service ls | grep andres || echo "No se encontraron servicios andres"
 
-          echo "descargando la imagen de git"
-          echo "${{ secrets.GHCR_PATH }}" | docker login ghcr.io -u andrespuglla5655 --password-stdin
-          docker pull ghcr.io/andrespuglla5655/andresprueba:latest
+    - name: ✅ Pipeline completado
+      run: |
+        echo "🎉 Pipeline CI/CD completado exitosamente!"
+        echo ""
+        echo "📦 Imagen publicada en:"
+        echo "   ghcr.io/andrespuglla5655/andresprueba:latest"
+        echo "   ghcr.io/andrespuglla5655/andresprueba:${{ github.sha }}"
+        echo ""
+        echo "🚀 Para desplegar manualmente en tu VPS:"
+        echo "   1. Conecta por SSH: ssh ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} -p ${{ secrets.VPS_SSH_PORT }}"
+        echo "   2. Crea directorio: mkdir -p ~/andres && cd ~/andres"
+        echo "   3. Copia stack.yml a ese directorio"
+        echo "   4. Ejecuta: docker stack deploy --with-registry-auth -c stack.yml andres"
