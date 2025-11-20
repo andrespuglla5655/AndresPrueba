@@ -121,7 +121,7 @@ jobs:
           docker pull ghcr.io/andrespuglla5655/andresprueba:latest
 
           echo "Deteniendo los servicios (stack)"
-          docker stack rm andres
+          docker stack rm || andres
 
           echo "esperar 20 segundos..."
           sleep 20

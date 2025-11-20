@@ -2,7 +2,7 @@ version: "3.8"
 
 services:
   andres:
-    image: ghcr.io/andrespuglla5655/andresprueba:latest
+    image: ghcr.io/andrespuglla5655/andresprueba:9b1d0cddadb4cd1d120d8d6b23ada5801f04d98c
     deploy:
       replicas: 1
       labels:
