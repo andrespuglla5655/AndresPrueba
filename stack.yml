@@ -20,8 +20,6 @@ services:
         - "traefik.docker.network=traefik-public"
     networks:
       - traefik-public
-    ports:
-      - "80:80"
 
 networks:
   traefik-public:
