@@ -77,17 +77,20 @@ jobs:
         platforms: linux/amd64,linux/arm64
 
     - name: 🧾 Verificar configuración SSH
-      if: env.VPS_HOST != ''
       run: |
-        echo "📋 Configuración SSH para despliegue:"
-        echo "Host: ${{ secrets.VPS_HOST }}"
-        echo "Usuario: ${{ secrets.VPS_USER }}"
-        echo "Puerto: ${{ secrets.VPS_SSH_PORT }}"
-        echo ""
-        echo "⚠️ NOTA: Si la conexión SSH falla, el pipeline continuará."
+        echo "📋 Verificando si las credenciales de VPS están configuradas..."
+        if [ "${{ secrets.VPS_HOST }}" != "" ]; then
+          echo "✅ Credenciales de VPS encontradas"
+          echo "Host: ${{ secrets.VPS_HOST }}"
+          echo "Usuario: ${{ secrets.VPS_USER }}"
+          echo "Puerto: ${{ secrets.VPS_SSH_PORT }}"
+        else
+          echo "⚠️ No se encontraron credenciales de VPS. Las acciones de despliegue se omitirán."
+          echo "Para habilitar el despliegue en VPS, configura los secrets VPS_HOST, VPS_USER, VPS_PASSWORD y VPS_SSH_PORT en GitHub."
+        fi
 
     - name: 📦 Copiar stack.yml al VPS (SCP)
-      if: env.VPS_HOST != ''
+      if: secrets.VPS_HOST != ''
       uses: appleboy/scp-action@v0.1.7
       continue-on-error: true
       with:
@@ -99,7 +102,7 @@ jobs:
         target: "/home/${{ secrets.VPS_USER }}/andres"
 
     - name: 🚀 Desplegar servicio en VPS
-      if: env.VPS_HOST != ''
+      if: secrets.VPS_HOST != ''
       uses: appleboy/ssh-action@v1.0.3
       continue-on-error: true
       with:
