@@ -2,8 +2,7 @@ version: "3.8"
 
 services:
   andres:
-    image: andres:latest
-    build: .
+    image: ghcr.io/andrespuglla5655/andresprueba:latest
     deploy:
       replicas: 1
       labels:
@@ -21,6 +20,8 @@ services:
         - "traefik.docker.network=traefik-public"
     networks:
       - traefik-public
+    ports:
+      - "80:80"
 
 networks:
   traefik-public:
