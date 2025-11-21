@@ -52,22 +52,12 @@ jobs:
     steps:
     - name: 🔎 Verificar secrets requeridos
       run: |
-        if [ -z "${{ secrets.VPS_SSH_KEY }}" ] && [ -z "${{ secrets.VPS_PASSWORD }}" ]; then
-          echo "⚠️ WARNING: No SSH key or password provided. Deployment will be skipped."
-          echo "To enable deployment, configure VPS_SSH_KEY or VPS_PASSWORD in Settings → Secrets"
-          exit 0
-        fi
-        if [ -z "${{ secrets.VPS_HOST }}" ]; then
-          echo "⚠️ WARNING: VPS_HOST not configured. Deployment will be skipped."
-          exit 0
-        fi
-        if [ -z "${{ secrets.VPS_USER }}" ]; then
-          echo "⚠️ WARNING: VPS_USER not configured. Deployment will be skipped."
-          exit 0
-        fi
+        echo "Verifying required secrets..."
+        echo "VPS_HOST configured: ${{ secrets.VPS_HOST != '' }}"
+        echo "VPS_USER configured: ${{ secrets.VPS_USER != '' }}"
 
     - name: 🧾 Mostrar variables básicas (solo locales, sin secretos)
-      if: secrets.VPS_HOST != ''
+      if: ${{ secrets.VPS_HOST != '' }}
       run: |
         echo "Probando conexión SSH con:"
         echo "Host: ${{ secrets.VPS_HOST }}"
@@ -75,7 +65,7 @@ jobs:
         echo "Puerto: ${{ secrets.VPS_SSH_PORT || '22' }}"
 
     - name: 🧪 Probar conexión SSH
-      if: secrets.VPS_HOST != ''
+      if: ${{ secrets.VPS_HOST != '' }}
       uses: appleboy/ssh-action@v1
       with:
         host: ${{ secrets.VPS_HOST }}
@@ -90,7 +80,7 @@ jobs:
           uptime
 
     - name: 🔐 Deploy to Server via SSH
-      if: secrets.VPS_HOST != ''
+      if: ${{ secrets.VPS_HOST != '' }}
       uses: appleboy/ssh-action@v1.0.3
       with:
         host: ${{ secrets.VPS_HOST }}
