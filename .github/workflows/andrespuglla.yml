@@ -103,6 +103,6 @@ jobs:
           cd ~/andresprueba
           git pull origin main
           docker pull ghcr.io/andrespuglla/andresprueba:latest
-          docker stack deploy -c stack.yml jeanmora
+          docker stack deploy -c stack.yml andres
           echo "✅ Deployment completed!"
           docker service ls
