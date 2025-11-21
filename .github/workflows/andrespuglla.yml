@@ -4,7 +4,7 @@ on:
   push:
     branches:
       - main
-  workflow_dispatch: # Permite ejecutar MANUALMENTE
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -41,8 +41,8 @@ jobs:
 
     - name: ✅ Image published successfully
       run: |
-        echo "✅ Image pushed to ghcr.io/${{ env.REPO_LOWER }}:latest"
-        echo "📦 Deploying to server..."
+        echo "Imagen publicada correctamente."
+        echo "Iniciando despliegue..."
 
   deploy:
     needs: build-and-push
@@ -52,57 +52,54 @@ jobs:
     steps:
     - name: 🔎 Verificar secrets requeridos
       run: |
-        if [ -z "${{ secrets.VPS_SSH_KEY }}" ] && [ -z "${{ secrets.VPS_PASSWORD }}" ]; then
-          echo "❌ ERROR: Configura VPS_SSH_KEY o VPS_PASSWORD en Settings → Secrets"
+        if [ -z "${{ secrets.VPS_PASSWORD }}" ]; then
+          echo "❌ Falta VPS_PASSWORD"
           exit 1
         fi
         if [ -z "${{ secrets.VPS_HOST }}" ]; then
-          echo "❌ ERROR: Configura VPS_HOST en Settings → Secrets"
+          echo "❌ Falta VPS_HOST"
           exit 1
         fi
         if [ -z "${{ secrets.VPS_USER }}" ]; then
-          echo "❌ ERROR: Configura VPS_USER en Settings → Secrets"
+          echo "❌ Falta VPS_USER"
           exit 1
         fi
-        if [ -z "${{ secrets.VSP_SSH_PORT }}" ]; then
-          echo "❌ ERROR: Configura VSP_SSH_PORT en Settings → Secrets"
+        if [ -z "${{ secrets.VPS_SSH_PORT }}" ]; then
+          echo "❌ Falta VPS_SSH_PORT"
           exit 1
         fi
 
-    - name: 🧾 Mostrar variables básicas (solo locales, sin secretos)
+    - name: 🧾 Mostrar variables básicas
       run: |
-        echo "Probando conexión SSH con:"
         echo "Host: ${{ secrets.VPS_HOST }}"
         echo "Usuario: ${{ secrets.VPS_USER }}"
-        echo "Puerto: ${{ secrets.VSP_SSH_PORT || '22' }}"
+        echo "Puerto: ${{ secrets.VPS_SSH_PORT }}"
 
     - name: 🧪 Probar conexión SSH
       uses: appleboy/ssh-action@v1
       with:
         host: ${{ secrets.VPS_HOST }}
         username: ${{ secrets.VPS_USER }}
-        key: ${{ secrets.VPS_SSH_KEY }}
         password: ${{ secrets.VPS_PASSWORD }}
-        port: ${{ secrets.VSP_SSH_PORT || '22' }}
+        port: ${{ secrets.VPS_SSH_PORT }}
         script: |
-          echo "✅ Conexión exitosa desde GitHub Actions"
+          echo "Conexión SSH exitosa"
           hostname
           whoami
           uptime
 
-    - name: 🔐 Deploy to Server via SSH
-      uses: appleboy/ssh-action@v1.0.3
+    - name: 🔐 Deploy to Server
+      uses: appleboy/ssh-action@v1
       with:
         host: ${{ secrets.VPS_HOST }}
         username: ${{ secrets.VPS_USER }}
-        key: ${{ secrets.VPS_SSH_KEY }}
         password: ${{ secrets.VPS_PASSWORD }}
-        port: ${{ secrets.VSP_SSH_PORT || '22' }}
+        port: ${{ secrets.VPS_SSH_PORT }}
         script: |
-          echo "🚀 Starting deployment..."
+          echo "🚀 Empezando deployment..."
           cd ~/andresprueba
           git pull origin main
-          docker pull ghcr.io/andrespuglla/andresprueba:latest
+          docker pull ghcr.io/${{ github.repository }}:latest
           docker stack deploy -c stack.yml andres
-          echo "✅ Deployment completed!"
           docker service ls
+          echo "✅ Deployment completado"
