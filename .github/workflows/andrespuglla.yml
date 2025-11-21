@@ -4,60 +4,19 @@ on:
   push:
     branches:
       - main
-  pull_request:
-    branches:
-      - main
+  workflow_dispatch: # Permite ejecutar manualmente
 
 permissions:
   contents: read
   packages: write
 
 jobs:
-  build:
+  build-and-push:
     runs-on: ubuntu-latest
 
     steps:
     - name: 🧾 Checkout repository
       uses: actions/checkout@v4
-
-    - name: 🐍 Set up Python
-      uses: actions/setup-python@v5
-      with:
-        python-version: '3.11'
-
-    - name: 📦 Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install -r requirements.txt
-
-    - name: 🧪 Run tests
-      run: |
-        pip install pytest
-        # Si tienes tests, pytest los ejecutará. Si no, esto pasará sin error
-        pytest --maxfail=1 --disable-warnings -q || echo "No tests found, skipping..."
-
-    - name: 🧹 Run lint
-      run: |
-        pip install flake8
-        # stop the build if there are Python syntax errors or undefined names
-        flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
-        # exit-zero treats all errors as warnings
-        flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
-
-    - name: ✅ Check syntax
-      run: |
-        python -m py_compile app.py
-
-    - name: 🧪 Test Docker image locally
-      run: |
-        docker build -t ghcr.io/andrespuglla5655/andresprueba:latest .
-        docker run -d -p 101:101 --name test-andres ghcr.io/andrespuglla5655/andresprueba:latest
-        sleep 5
-        curl -f http://localhost:101
-        docker rm -f test-andres
-
-    - name: 🔧 Set up Docker Buildx
-      uses: docker/setup-buildx-action@v3
 
     - name: 🔐 Login to GitHub Container Registry
       uses: docker/login-action@v3
@@ -66,70 +25,84 @@ jobs:
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
 
-    - name: 🏗️ Build and push Docker image
+    - name: 🏷️ Prepare Docker metadata
+      id: meta
+      run: |
+        echo "REPO_LOWER=$(echo '${{ github.repository }}' | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
+
+    - name: 🚀 Build and push Docker image
       uses: docker/build-push-action@v6
       with:
         context: .
         push: true
         tags: |
-          ghcr.io/andrespuglla5655/andresprueba:latest
-          ghcr.io/andrespuglla5655/andresprueba:${{ github.sha }}
-        platforms: linux/amd64,linux/arm64
+          ghcr.io/${{ env.REPO_LOWER }}:latest
+          ghcr.io/${{ env.REPO_LOWER }}:${{ github.sha }}
 
-    - name: 🧾 Verificar configuración SSH
+    - name: ✅ Image published successfully
       run: |
-        echo "📋 Verificando si las credenciales de VPS están configuradas..."
-        if [ "${{ secrets.VPS_HOST }}" != "" ]; then
-          echo "✅ Credenciales de VPS encontradas"
-          echo "Host: ${{ secrets.VPS_HOST }}"
-          echo "Usuario: ${{ secrets.VPS_USER }}"
-          echo "Puerto: ${{ secrets.VPS_SSH_PORT }}"
-        else
-          echo "⚠️ No se encontraron credenciales de VPS. Las acciones de despliegue se omitirán."
-          echo "Para habilitar el despliegue en VPS, configura los secrets VPS_HOST, VPS_USER, VPS_PASSWORD y VPS_SSH_PORT en GitHub."
+        echo "✅ Image pushed to ghcr.io/${{ env.REPO_LOWER }}:latest"
+        echo "📦 Deploying to server..."
+
+  deploy:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+
+    steps:
+    - name: 🔎 Verificar secrets requeridos
+      run: |
+        if [ -z "${{ secrets.VPS_SSH_KEY }}" ] && [ -z "${{ secrets.VPS_PASSWORD }}" ]; then
+          echo "❌ ERROR: Configura VPS_SSH_KEY o VPS_PASSWORD en Settings → Secrets"
+          exit 1
+        fi
+        if [ -z "${{ secrets.VPS_HOST }}" ]; then
+          echo "❌ ERROR: Configura VPS_HOST en Settings → Secrets"
+          exit 1
+        fi
+        if [ -z "${{ secrets.VPS_USER }}" ]; then
+          echo "❌ ERROR: Configura VPS_USER en Settings → Secrets"
+          exit 1
+        fi
+        if [ -z "${{ secrets.VSP_SSH_PORT }}" ]; then
+          echo "❌ ERROR: Configura VSP_SSH_PORT en Settings → Secrets"
+          exit 1
         fi
 
-    - name: 📦 Copiar stack.yml al VPS (SCP)
-      if: secrets.VPS_HOST != ''
-      uses: appleboy/scp-action@v0.1.7
-      continue-on-error: true
-      with:
-        host: ${{ secrets.VPS_HOST }}
-        username: ${{ secrets.VPS_USER }}
-        password: ${{ secrets.VPS_PASSWORD }}
-        port: ${{ secrets.VPS_SSH_PORT }}
-        source: "stack.yml"
-        target: "/home/${{ secrets.VPS_USER }}/andres"
-
-    - name: 🚀 Desplegar servicio en VPS
-      if: secrets.VPS_HOST != ''
-      uses: appleboy/ssh-action@v1.0.3
-      continue-on-error: true
-      with:
-        host: ${{ secrets.VPS_HOST }}
-        username: ${{ secrets.VPS_USER }}
-        password: ${{ secrets.VPS_PASSWORD }}
-        port: ${{ secrets.VPS_SSH_PORT }}
-        timeout: 30s
-        command_timeout: 5m
-        script: |
-          echo "🚀 Iniciando despliegue en VPS..."
-          cd /home/${{ secrets.VPS_USER }}/andres || mkdir -p /home/${{ secrets.VPS_USER }}/andres && cd /home/${{ secrets.VPS_USER }}/andres
-          
-          echo "📋 Verificando stack.yml:"
-          ls -la stack.yml || echo "⚠️ stack.yml no encontrado"
-          
-          echo "📥 Descargando imagen desde GHCR:"
-          docker pull ghcr.io/andrespuglla5655/andresprueba:latest || echo "⚠️ Error al descargar imagen"
-          
-          echo "🔄 Desplegando stack:"
-          docker stack deploy --with-registry-auth -c stack.yml andres || echo "⚠️ Error en despliegue"
-          
-          echo "📊 Servicios activos:"
-          docker service ls | grep andres || echo "No se encontraron servicios andres"
-
-    - name: ✅ Pipeline completado exitosamente
+    - name: 🧾 Mostrar variables básicas (solo locales, sin secretos)
       run: |
-        echo "🎉 Pipeline CI/CD completado exitosamente!"
-        echo "📦 Imagen publicada en GHCR: ghcr.io/andrespuglla5655/andresprueba"
+        echo "Probando conexión SSH con:"
+        echo "Host: ${{ secrets.VPS_HOST }}"
+        echo "Usuario: ${{ secrets.VPS_USER }}"
+        echo "Puerto: ${{ secrets.VSP_SSH_PORT || '22' }}"
 
+    - name: 🧪 Probar conexión SSH
+      uses: appleboy/ssh-action@v1
+      with:
+        host: ${{ secrets.VPS_HOST }}
+        username: ${{ secrets.VPS_USER }}
+        key: ${{ secrets.VPS_SSH_KEY }}
+        password: ${{ secrets.VPS_PASSWORD }}
+        port: ${{ secrets.VSP_SSH_PORT || '22' }}
+        script: |
+          echo "✅ Conexión exitosa desde GitHub Actions"
+          hostname
+          whoami
+          uptime
+
+    - name: 🔐 Deploy to Server via SSH
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: ${{ secrets.VPS_HOST }}
+        username: ${{ secrets.VPS_USER }}
+        key: ${{ secrets.VPS_SSH_KEY }}
+        password: ${{ secrets.VPS_PASSWORD }}
+        port: ${{ secrets.VSP_SSH_PORT || '22' }}
+        script: |
+          echo "🚀 Starting deployment..."
+          cd ~/andresprueba
+          git pull origin main
+          docker pull ghcr.io/andrespuglla5655/andresprueba:latest
+          docker stack deploy -c stack.yml andres
+          echo "✅ Deployment completed!"
+          docker service ls
