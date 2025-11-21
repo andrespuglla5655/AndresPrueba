@@ -4,7 +4,7 @@ on:
   push:
     branches:
       - main
-  workflow_dispatch: # Permite ejecutar 
+  workflow_dispatch: # Permite ejecutar MANUALMENTE
 
 permissions:
   contents: read
