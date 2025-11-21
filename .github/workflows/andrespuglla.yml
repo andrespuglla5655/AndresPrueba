@@ -52,27 +52,38 @@ jobs:
     steps:
     - name: 🔎 Verificar secrets requeridos
       run: |
-        echo "Verifying required secrets..."
-        echo "VPS_HOST configured: ${{ secrets.VPS_HOST != '' }}"
-        echo "VPS_USER configured: ${{ secrets.VPS_USER != '' }}"
+        if [ -z "${{ secrets.VPS_SSH_KEY }}" ] && [ -z "${{ secrets.VPS_PASSWORD }}" ]; then
+          echo "❌ ERROR: Configura VPS_SSH_KEY o VPS_PASSWORD en Settings → Secrets"
+          exit 1
+        fi
+        if [ -z "${{ secrets.VPS_HOST }}" ]; then
+          echo "❌ ERROR: Configura VPS_HOST en Settings → Secrets"
+          exit 1
+        fi
+        if [ -z "${{ secrets.VPS_USER }}" ]; then
+          echo "❌ ERROR: Configura VPS_USER en Settings → Secrets"
+          exit 1
+        fi
+        if [ -z "${{ secrets.VSP_SSH_PORT }}" ]; then
+          echo "❌ ERROR: Configura VSP_SSH_PORT en Settings → Secrets"
+          exit 1
+        fi
 
     - name: 🧾 Mostrar variables básicas (solo locales, sin secretos)
-      if: ${{ secrets.VPS_HOST != '' }}
       run: |
         echo "Probando conexión SSH con:"
         echo "Host: ${{ secrets.VPS_HOST }}"
         echo "Usuario: ${{ secrets.VPS_USER }}"
-        echo "Puerto: ${{ secrets.VPS_SSH_PORT || '22' }}"
+        echo "Puerto: ${{ secrets.VSP_SSH_PORT || '22' }}"
 
     - name: 🧪 Probar conexión SSH
-      if: ${{ secrets.VPS_HOST != '' }}
       uses: appleboy/ssh-action@v1
       with:
         host: ${{ secrets.VPS_HOST }}
         username: ${{ secrets.VPS_USER }}
         key: ${{ secrets.VPS_SSH_KEY }}
         password: ${{ secrets.VPS_PASSWORD }}
-        port: ${{ secrets.VPS_SSH_PORT || '22' }}
+        port: ${{ secrets.VSP_SSH_PORT || '22' }}
         script: |
           echo "✅ Conexión exitosa desde GitHub Actions"
           hostname
@@ -80,21 +91,18 @@ jobs:
           uptime
 
     - name: 🔐 Deploy to Server via SSH
-      if: ${{ secrets.VPS_HOST != '' }}
       uses: appleboy/ssh-action@v1.0.3
       with:
         host: ${{ secrets.VPS_HOST }}
         username: ${{ secrets.VPS_USER }}
         key: ${{ secrets.VPS_SSH_KEY }}
         password: ${{ secrets.VPS_PASSWORD }}
-        port: ${{ secrets.VPS_SSH_PORT || '22' }}
+        port: ${{ secrets.VSP_SSH_PORT || '22' }}
         script: |
           echo "🚀 Starting deployment..."
-          cd ~/andresprueba || mkdir -p ~/andresprueba && cd ~/andresprueba
-          git init || true
-          git remote add origin https://github.com/andrespuglla5655/AndresPrueba.git || true
-          git pull origin main || true
-          docker pull ghcr.io/andrespuglla5655/andresprueba:latest || echo "⚠️ Failed to pull image"
-          docker stack deploy -c stack.yml andres || echo "⚠️ Failed to deploy stack"
+          cd ~/andresprueba
+          git pull origin main
+          docker pull ghcr.io/andrespuglla/andresprueba:latest
+          docker stack deploy -c stack.yml jeanmora
           echo "✅ Deployment completed!"
-          docker service ls | grep andres || echo "No andres services found"
+          docker service ls
