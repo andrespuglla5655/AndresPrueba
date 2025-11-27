@@ -99,7 +99,7 @@ jobs:
           echo "🚀 Empezando deployment..."
           cd ~/andresprueba
           git pull origin main
-          docker pull ghcr.io/${{ github.repository }}:latest
+          docker pull ghcr.io/andrespuglla5655/andresprueba:latest
           docker stack deploy -c stack.yml andres
           docker service ls
           echo "✅ Deployment completado"
